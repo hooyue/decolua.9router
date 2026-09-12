@@ -92,3 +92,6 @@ graphify-out/*
 9router-*
 .zcode
 var
+
+# Upstream unpinned this golden snapshot (2203cd8f) — vitest regenerates it per run
+tests/translator/__snapshots__/golden-url-header.test.js.snap
