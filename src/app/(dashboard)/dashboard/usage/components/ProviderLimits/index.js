@@ -40,7 +40,7 @@ import {
 } from "./utils";
 import Card from "@/shared/components/Card";
 import { ConfirmModal, EditConnectionModal } from "@/shared/components";
-import { USAGE_SUPPORTED_PROVIDERS } from "@/shared/constants/providers";
+import { USAGE_SUPPORTED_PROVIDERS, AI_PROVIDERS } from "@/shared/constants/providers";
 import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 
 // Maps the stored providerSpecificData.authMethod to a human label for Kiro.
@@ -64,6 +64,12 @@ const AUTO_PING_TOOLTIPS = {
   claude: "When your 5h quota runs out, auto-sends a request the moment it resets so a new window starts right away.",
   codex: "Auto-starts the next 5h Codex window after reset by sending a tiny gpt-5.5 request. Consumes a small amount of quota.",
 };
+
+// Card and filter titles use the registry display name; raw id is the fallback
+// for dynamic provider nodes that never appear in AI_PROVIDERS.
+function getQuotaProviderTitle(provider) {
+  return AI_PROVIDERS?.[provider]?.name || provider;
+}
 
 function kiroMethodLabel(conn) {
   const m = conn.providerSpecificData?.authMethod;
@@ -767,7 +773,9 @@ export default function ProviderLimits() {
   };
 
   const selectedProviderLabel =
-    providerFilter === "all" ? "All providers" : providerFilter;
+    providerFilter === "all"
+      ? "All providers"
+      : getQuotaProviderTitle(providerFilter);
   const hasEligibleConnections = totals.eligibleConnections > 0;
   const hasVisibleConnections = sortedConnections.length > 0;
   const emptyState = getConnectionsEmptyMessage(
@@ -906,7 +914,7 @@ export default function ProviderLimits() {
                           fallbackText={provider.slice(0, 2).toUpperCase()}
                         />
                         <span className="font-medium capitalize">
-                          {provider}
+                          {getQuotaProviderTitle(provider)}
                         </span>
                         {providerFilter === provider && (
                           <span className="material-symbols-outlined ml-auto text-[20px]">
@@ -1080,7 +1088,7 @@ export default function ProviderLimits() {
                     </div>
                     <div className="min-w-0">
                       <h3 className="text-sm font-semibold text-text-primary capitalize truncate">
-                        {conn.provider}
+                        {getQuotaProviderTitle(conn.provider)}
                       </h3>
                       {getConnectionLabel(conn) ? (
                         <p className="text-xs text-text-muted truncate">

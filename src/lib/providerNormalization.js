@@ -41,5 +41,15 @@ export function normalizeProviderSpecificData(provider, body = {}, providerSpeci
     if (baseUrl) next.baseUrl = baseUrl;
   }
 
+  if (provider === "volcengine-agent") {
+    // IAM credentials for the AFP quota API (GetAFPUsage) — the ark- inference
+    // key cannot call the control plane.
+    const accessKeyId = (next.accessKeyId || body.accessKeyId || "").trim();
+    const secretAccessKey = (next.secretAccessKey || body.secretAccessKey || "").trim();
+
+    if (accessKeyId) next.accessKeyId = accessKeyId;
+    if (secretAccessKey) next.secretAccessKey = secretAccessKey;
+  }
+
   return Object.keys(next).length > 0 ? next : null;
 }

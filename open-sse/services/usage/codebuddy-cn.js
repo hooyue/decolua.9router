@@ -22,8 +22,52 @@
 import { proxyAwareFetch } from "../../utils/proxyFetch.js";
 import { PROVIDERS } from "../../providers/index.js";
 import { U, parseResetTime } from "./shared.js";
+import { extractEnterpriseIdFromToken } from "../../utils/enterpriseId.js";
 
 const PROVIDER_ID = "codebuddy-cn";
+
+// Fetch enterprise usage from https://www.codebuddy.cn/billing/meter/get-enterprise-user-usage
+// NOTE: data.credit is the CONSUMED amount (已用/消耗), not remaining — verified
+// against the official usage console. Remaining is derived: limitNum - credit.
+async function fetchEnterpriseUsage(url, token, enterpriseId, proxyOptions) {
+  if (!url || !enterpriseId) return null;
+  try {
+    const response = await proxyAwareFetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "X-Enterprise-Id": enterpriseId,
+        "X-Client-Platform": "web",
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: "{}",
+    }, proxyOptions);
+
+    if (!response.ok) return null;
+    const json = await response.json();
+    if (json?.code !== 0 || !json?.data) return null;
+
+    const data = json.data;
+    const total = Number(data.limitNum) || 0;
+    const used = Number(data.credit) || 0;
+
+    return {
+      plan: "Enterprise",
+      quotas: {
+        Enterprise: {
+          used,
+          total,
+          resetAt: parseResetTime(data.cycleResetTime || data.cycleEndTime),
+          unlimited: false,
+          recurring: true,
+        },
+      },
+    };
+  } catch {
+    return null;
+  }
+}
 
 // Prefer the *Precise string fields (exact), fall back to the numeric ones.
 function num(precise, plain) {
@@ -50,6 +94,23 @@ async function getCodeBuddyUsage(providerId, accessToken, apiKey, providerSpecif
   }
 
   try {
+    const enterpriseId = providerSpecificData?.enterpriseId ||
+      extractEnterpriseIdFromToken(token);
+
+    // If an enterprise ID is available, try the enterprise usage endpoint first.
+    // If it succeeds, return the enterprise quota directly.
+    if (enterpriseId) {
+      const enterpriseUsage = await fetchEnterpriseUsage(
+        U(providerId).enterpriseUrl,
+        token,
+        enterpriseId,
+        proxyOptions
+      );
+      if (enterpriseUsage) {
+        return enterpriseUsage;
+      }
+    }
+
     const response = await proxyAwareFetch(U(providerId).url, {
       method: "POST",
       headers: {
@@ -76,6 +137,9 @@ async function getCodeBuddyUsage(providerId, accessToken, apiKey, providerSpecif
     const data = json?.data?.Response?.Data || {};
     const accounts = Array.isArray(data.Accounts) ? data.Accounts : [];
     if (accounts.length === 0) {
+      // Enterprise accounts (WorkBuddy) have no personal packages — but for them
+      // we already returned via the enterprise endpoint above, so reaching here
+      // means the account genuinely has no credit packages.
       return { message: "CodeBuddy CN connected. No credit package found." };
     }
 
