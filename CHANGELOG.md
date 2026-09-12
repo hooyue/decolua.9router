@@ -1,3 +1,15 @@
+# v0.5.75.1 (2026-09-12)
+
+## Features
+- **Providers**: merge the private v0.5.69.x line onto upstream v0.5.75 — add the Volcengine Ark Agent Plan provider (`volcengine-agent`, alias `aap`) with OpenAI Chat Completions plus lossless Responses passthrough on `ark.cn-beijing.volces.com/api/plan/v3`
+- **Quota**: AFP quota tracker for Ark Agent Plan via the Volcengine Signature V4 control-plane API (`GetAFPUsage`), showing 5-hour / daily / weekly / monthly windows per connection (IAM AK/SK stored per connection)
+- **CodeBuddy**: support enterprise (WorkBuddy) accounts — quota is fetched from `get-enterprise-user-usage` when the credential carries `ent-member:<id>` roles; chat requests forward `X-Enterprise-Id` auto-extracted from the OAuth token
+- **Dashboard**: Quota Tracker tables paginate at 4 rows per page and exhausted quotas (remaining 0, non-unlimited) sink to the back in every sort mode; quota cards and the provider filter use registry display names
+
+## Notes
+- The Antigravity 5h/weekly dual-pool display from v0.5.69.4 is superseded by upstream v0.5.75's official weekly quota tracking (`retrieveUserQuotaSummary` + free-tier handling); the private google.js rewrite and its dedicated test were dropped in favor of the upstream implementation
+- Add `AGENTS.md` repo guide; ignore `var/` and `.zcode/` locally
+
 # v0.5.75 (2026-09-10)
 
 ## Features
@@ -23,6 +35,29 @@
 - **Video / Vertex**: reject job ids and model ids that would escape the request URL path (SSRF)
 - **Usage**: parse the Fable weekly limit from `limits[]` instead of fabricating a row (#3847)
 - **Auth**: set a 24h `maxAge` on the dashboard session cookie
+
+# v0.5.69.4 (2026-09-09)
+
+## Features
+- **Antigravity**: 支持同时显示 5 小时与周额度双池配额（对齐 CliProxyApi），优先调用 `retrieveUserQuotaSummary`，自动映射模型配额消除双池不匹配 429 误判，并支持平滑降级
+
+# v0.5.69.3 (2026-09-07)
+
+## Features
+- **Dashboard**: Quota Tracker tables now paginate at 4 rows per page (was 10), and exhausted quotas (remaining 0, non-unlimited) consistently sink to the back of the list in every sort mode so active allowances stay on the first page
+
+# v0.5.69.2 (2026-09-07)
+
+## Features
+- **CodeBuddy**: support enterprise (WorkBuddy) accounts — quota is fetched from `get-enterprise-user-usage` when the credential carries `ent-member:<id>` roles, surfacing the Enterprise allowance (credit/limitNum/cycleReset) instead of "No credit package found"
+- **CodeBuddy**: chat requests now forward `X-Enterprise-Id` (auto-extracted from the OAuth token into `providerSpecificData`), fixing upstream 429 "体验版尚未激活" rejections for enterprise accounts
+
+# v0.5.69.1 (2026-09-06)
+
+## Features
+- **Providers**: add Volcengine Ark Agent Plan provider (`volcengine-agent`, alias `aap`) — OpenAI Chat Completions plus lossless Responses API passthrough on `ark.cn-beijing.volces.com/api/plan/v3`, with the Agent Plan model catalog
+- **Quota**: AFP quota tracker for Ark Agent Plan via the Volcengine Signature V4 control-plane API (`GetAFPUsage`), showing 5-hour / daily / weekly / monthly windows per connection (IAM AK/SK stored per connection)
+- **Dashboard**: Quota Tracker cards and the provider filter now use registry display names instead of CSS-capitalized provider ids
 
 # v0.5.69 (2026-09-05)
 
