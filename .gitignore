@@ -90,7 +90,6 @@ graphify-out/*
 # Kiro local workspace state
 .kiro/
 9router-*
-
 # Local sensitive / temp files
 .engine-token.txt
 .tmp-prov.json
@@ -103,4 +102,8 @@ start-dev-silent.cjs
 debug.log
 
 .zcode
+var
 var/lib/9router
+
+# Upstream unpinned this golden snapshot (2203cd8f) — vitest regenerates it per run
+tests/translator/__snapshots__/golden-url-header.test.js.snap

@@ -195,6 +195,7 @@
     "vercel-ai-gateway": "vercel-ai-gateway",
     "vertex": "vertex",
     "vertex-partner": "vertex-partner",
+    "volcengine-agent": "aap",
     "volcengine-ark": "volcengine-ark",
     "xai": "xai",
     "xiaomi-mimo": "xiaomi-mimo",
@@ -202,6 +203,7 @@
     "zed": "zd"
   },
   "modelKeys": [
+    "aap",
     "af",
     "ag",
     "alicode",

@@ -317,6 +317,48 @@ export function getQuotaVisibilityKey(quota) {
 }
 
 /**
+ * A quota is exhausted when nothing remains and it isn't an unlimited row.
+ * (calculatePercentage maps total=0/unlimited rows to 0%, so the unlimited
+ * flag must be checked explicitly or they would be treated as used up.)
+ */
+function isExhausted(quota) {
+  return !quota?.unlimited && (quota?.remaining ?? 0) <= 0;
+}
+
+/**
+ * Sort quota rows for the QuotaTable. Exhausted quotas (remaining 0, not
+ * unlimited) always sink to the back so active allowances stay on the first
+ * page. `remaining` here is the normalized 0-100 percentage computed by
+ * getRemainingPercentage. Sorting is stable within each partition.
+ *
+ * @param {Array} quotas - Normalized quota rows (with `remaining`)
+ * @param {string} sortMode - "default" | "remaining-asc" | "remaining-desc"
+ */
+export function sortQuotas(quotas, sortMode) {
+  const byExhausted = (a, b) => {
+    const ea = isExhausted(a);
+    const eb = isExhausted(b);
+    if (ea !== eb) return ea ? 1 : -1;
+    return 0;
+  };
+
+  if (sortMode === "remaining-asc") {
+    return [...quotas].sort(
+      (a, b) => byExhausted(a, b) || a.remaining - b.remaining || a.name.localeCompare(b.name),
+    );
+  }
+
+  if (sortMode === "remaining-desc") {
+    return [...quotas].sort(
+      (a, b) => byExhausted(a, b) || b.remaining - a.remaining || a.name.localeCompare(b.name),
+    );
+  }
+
+  // Default: preserve the provider's own order, just sink exhausted rows.
+  return [...quotas.filter((q) => !isExhausted(q)), ...quotas.filter(isExhausted)];
+}
+
+/**
  * Trim hidden quota keys to only those matching currently valid quotas.
  * Stale or obsolete model keys are dropped.
  */
@@ -619,6 +661,21 @@ export function parseQuotaData(provider, data) {
       case "groq":
         // Requests/Tokens rate-limit windows from response headers — absolute
         // used/total (calculatePercentage derives the bar), like Codex/Kiro.
+        if (data.quotas) {
+          Object.entries(data.quotas).forEach(([name, quota]) => {
+            normalizedQuotas.push({
+              name,
+              used: quota.used || 0,
+              total: quota.total || 0,
+              resetAt: quota.resetAt || null,
+            });
+          });
+        }
+        break;
+
+      case "volcengine-agent":
+        // AFP (Agent Fuel Points) windows — absolute used/total like Groq,
+        // resetAt per window (5h / daily / weekly / monthly).
         if (data.quotas) {
           Object.entries(data.quotas).forEach(([name, quota]) => {
             normalizedQuotas.push({

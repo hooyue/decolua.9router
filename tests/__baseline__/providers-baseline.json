@@ -190,7 +190,8 @@
       "scheme": "bearer"
     },
     "usage": {
-      "url": "https://copilot.tencent.com/v2/billing/meter/get-user-resource"
+      "url": "https://copilot.tencent.com/v2/billing/meter/get-user-resource",
+      "enterpriseUrl": "https://www.codebuddy.cn/billing/meter/get-enterprise-user-usage"
     },
     "format": "openai",
     "tokenUrl": "https://copilot.tencent.com/v2/plugin/auth/token"
@@ -1037,5 +1038,36 @@
       "preserveCacheControl": true
     },
     "format": "openai"
+  },
+  "volcengine-agent": {
+    "baseUrl": "https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions",
+    "usage": {
+      "url": "https://open.volcengineapi.com",
+      "action": "GetAFPUsage",
+      "version": "2024-01-01",
+      "region": "cn-beijing",
+      "service": "ark"
+    },
+    "format": "openai",
+    "transports": [
+      {
+        "format": "openai",
+        "baseUrl": "https://ark.cn-beijing.volces.com/api/plan/v3/chat/completions",
+        "auth": {
+          "combined": true,
+          "header": "Authorization",
+          "scheme": "bearer"
+        }
+      },
+      {
+        "format": "openai-responses",
+        "baseUrl": "https://ark.cn-beijing.volces.com/api/plan/v3/responses",
+        "auth": {
+          "combined": true,
+          "header": "Authorization",
+          "scheme": "bearer"
+        }
+      }
+    ]
   }
 }

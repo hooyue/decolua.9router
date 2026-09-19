@@ -1,4 +1,5 @@
 import { DefaultExecutor } from "./default.js";
+import { extractEnterpriseIdFromToken } from "../utils/enterpriseId.js";
 
 /**
  * CodeBuddyExecutor — talks to https://copilot.tencent.com/v2/chat/completions
@@ -12,6 +13,16 @@ import { DefaultExecutor } from "./default.js";
 export class CodeBuddyExecutor extends DefaultExecutor {
   constructor() {
     super("codebuddy-cn");
+  }
+
+  buildHeaders(credentials, stream = true) {
+    const headers = super.buildHeaders(credentials, stream);
+    const enterpriseId = credentials?.providerSpecificData?.enterpriseId ||
+      extractEnterpriseIdFromToken(credentials?.accessToken || credentials?.apiKey);
+    if (enterpriseId) {
+      headers["X-Enterprise-Id"] = enterpriseId;
+    }
+    return headers;
   }
 
   transformRequest(model, body, stream, credentials) {
