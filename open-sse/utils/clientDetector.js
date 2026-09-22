@@ -9,6 +9,7 @@ const NATIVE_PAIRS = {
   "gemini-cli": ["gemini-cli"],
   "antigravity": ["antigravity"],
   "codex": ["codex"],
+  "opencode": ["opencode", "opencode-go"],
 };
 
 /**
@@ -45,6 +46,16 @@ export function detectClientTool(headers = {}, body = {}) {
 
   // DeepSeek TUI
   if (ua.includes("deepseek-tui")) return "deepseek-tui";
+
+  // OpenCode CLI / Desktop
+  if (
+    ua.includes("opencode") ||
+    headers["x-opencode-session"] ||
+    headers["x-opencode-client"] ||
+    headers["x-opencode-project"]
+  ) {
+    return "opencode";
+  }
 
   return null;
 }

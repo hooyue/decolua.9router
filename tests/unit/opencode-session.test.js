@@ -201,6 +201,47 @@ describe("OpenCode Free User-Agent Validation", () => {
 
     const headersFuture = executor.buildHeaders({ rawHeaders: { "user-agent": "opencode/1.19.0" } });
     expect(headersFuture["User-Agent"]).toBe("opencode/1.19.0");
+
+    const headersV2Stable = executor.buildHeaders({ rawHeaders: { "user-agent": "opencode/stable/2.1.2/cli" } });
+    expect(headersV2Stable["User-Agent"]).toBe("opencode/stable/2.1.2/cli");
+
+    const headersV2Desktop = executor.buildHeaders({ rawHeaders: { "user-agent": "opencode/beta/2.0.0/desktop" } });
+    expect(headersV2Desktop["User-Agent"]).toBe("opencode/beta/2.0.0/desktop");
+
+    const headersV2Dev = executor.buildHeaders({ rawHeaders: { "user-agent": "opencode/dev/2.1.0/cli" } });
+    expect(headersV2Dev["User-Agent"]).toBe("opencode/dev/2.1.0/cli");
+  });
+
+  it("populates x-session-affinity, X-Session-Id, and forwards x-parent-session-id", () => {
+    const executor = getExecutor("opencode");
+    const valid = "ses_f534dfae8ffeCy4Ee4tLWNygDc";
+    const headers = executor.buildHeaders({
+      rawHeaders: {
+        "x-opencode-session": valid,
+        "x-parent-session-id": "ses_parent1234567890abcdef",
+        "x-opencode-client": "cli",
+      },
+    });
+
+    expect(headers["x-opencode-session"]).toBe(valid);
+    expect(headers["x-session-affinity"]).toBe(valid);
+    expect(headers["X-Session-Id"]).toBe(valid);
+    expect(headers["x-parent-session-id"]).toBe("ses_parent1234567890abcdef");
+    expect(headers["x-opencode-client"]).toBe("cli");
+  });
+
+  it("extracts native session from x-session-affinity or x-session-id", () => {
+    const executor = getExecutor("opencode");
+    const valid = "ses_f534dfae8ffeCy4Ee4tLWNygDc";
+    const { prepared: prepAffinity } = prepare(executor, {
+      credentials: makeCredentials({ rawHeaders: { "x-session-affinity": valid } }),
+    });
+    expect(prepAffinity._opencodeSession).toBe(valid);
+
+    const { prepared: prepSessionId } = prepare(executor, {
+      credentials: makeCredentials({ rawHeaders: { "X-Session-Id": valid } }),
+    });
+    expect(prepSessionId._opencodeSession).toBe(valid);
   });
 });
 
@@ -310,6 +351,26 @@ describe("OpenCode Stable Session Reuse (429 follow-up)", () => {
     });
     expect(chatFull.tools.length).toBe(2);
     expect(chatFull.tools[0].function.description).toBe("existing");
+
+    // Case 4: responses model with existing tools -> must still inject bash and read
+    const responsesWithTools = executor.transformRequest("muse-spark-1.3-contributor-free", {
+      input: [{ type: "message", role: "user", content: [{ type: "input_text", text: "hi" }] }],
+      tools: [{ type: "function", name: "my_custom_tool", description: "custom", parameters: { type: "object", properties: {} } }],
+    });
+    const responsesToolNames = responsesWithTools.tools.map((t) => t.name || t.function?.name);
+    expect(responsesToolNames).toContain("my_custom_tool");
+    expect(responsesToolNames).toContain("bash");
+    expect(responsesToolNames).toContain("read");
+  });
+
+  it("detects opencode client tool via clientDetector", async () => {
+    const { detectClientTool, isNativePassthrough } = await import("../../open-sse/utils/clientDetector.js");
+    expect(detectClientTool({ "user-agent": "opencode/stable/2.1.2/cli" })).toBe("opencode");
+    expect(detectClientTool({ "user-agent": "opencode/1.18.31" })).toBe("opencode");
+    expect(detectClientTool({ "x-opencode-session": "ses_123" })).toBe("opencode");
+    expect(detectClientTool({ "x-opencode-client": "desktop" })).toBe("opencode");
+    expect(isNativePassthrough("opencode", "opencode")).toBe(true);
+    expect(isNativePassthrough("opencode", "opencode-go")).toBe(true);
   });
 
   it("declares forceStream on the opencode transport so chatCore serves SSE upstream", async () => {
