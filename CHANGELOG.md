@@ -1,3 +1,12 @@
+# v0.5.91.1 (2026-09-26)
+
+## Features
+- **Providers**: carry the private v0.5.85.1 line onto upstream v0.5.91 — Volcengine Ark Agent Plan provider (`volcengine-agent`, alias `aap`) with OpenAI Chat Completions plus lossless Responses passthrough on `ark.cn-beijing.volces.com/api/plan/v3` (renumbered to p131; upstream now owns p125–p130)
+- **Quota**: AFP quota tracker for Ark Agent Plan via the Volcengine Signature V4 control-plane API (`GetAFPUsage`), showing 5-hour / daily / weekly / monthly windows per connection (IAM AK/SK stored per connection)
+- **CodeBuddy**: support enterprise (WorkBuddy) accounts — quota is fetched from `get-enterprise-user-usage` when the credential carries `ent-member:<id>` roles; chat requests forward `X-Enterprise-Id` auto-extracted from the OAuth token
+- **Dashboard**: Quota Tracker tables paginate at 4 rows per page and exhausted quotas (remaining 0, non-unlimited) sink to the back in every sort mode
+- **OpenCode**: support v2 User-Agent formats (`opencode/stable/...`, `opencode/dev/...`, `opencode/beta/...`), session affinity headers (`x-session-affinity`, `x-session-id`, `x-parent-session-id`), and opencode client tool detection
+
 # v0.5.91 (2026-09-26)
 
 ## Features
