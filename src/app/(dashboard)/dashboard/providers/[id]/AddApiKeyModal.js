@@ -20,6 +20,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
 
   const isAzure = provider === "azure";
   const isCloudflareAi = provider === "cloudflare-ai";
+  const isVolcengineAgent = provider === "volcengine-agent";
   const providerRegions = AI_PROVIDERS?.[provider]?.regions || null;
   const defaultRegion = AI_PROVIDERS?.[provider]?.defaultRegion || providerRegions?.[0]?.id || "";
 
@@ -38,6 +39,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
     organization: "",
   });
   const [cloudflareData, setCloudflareData] = useState({ accountId: "" });
+  const [volcengineData, setVolcengineData] = useState({ accessKeyId: "", secretAccessKey: "" });
   const [region, setRegion] = useState(defaultRegion);
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState(null);
@@ -66,6 +68,12 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
     }
     if (isCloudflareAi) {
       return { accountId: cloudflareData.accountId };
+    }
+    if (isVolcengineAgent) {
+      return {
+        accessKeyId: volcengineData.accessKeyId.trim(),
+        secretAccessKey: volcengineData.secretAccessKey.trim(),
+      };
     }
     if (providerRegions && region) {
       return { region };
@@ -364,6 +372,31 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
           </div>
         )}
 
+        {isVolcengineAgent && (
+          <div className="bg-sidebar/50 p-4 rounded-lg border border-accent/20">
+            <h3 className="font-semibold mb-3 text-sm">Volcengine IAM Credentials (Quota Tracker)</h3>
+            <div className="flex flex-col gap-3">
+              <Input
+                label="AccessKeyId"
+                value={volcengineData.accessKeyId}
+                onChange={(e) => setVolcengineData({ ...volcengineData, accessKeyId: e.target.value })}
+                placeholder="AKLT..."
+              />
+              <Input
+                label="SecretAccessKey"
+                type="password"
+                value={volcengineData.secretAccessKey}
+                onChange={(e) => setVolcengineData({ ...volcengineData, secretAccessKey: e.target.value })}
+                placeholder=""
+              />
+            </div>
+            <p className="text-xs text-text-muted mt-2">
+              Used only to query Agent Plan (AFP) quota in the Quota Tracker. Create the key pair in the
+              Volcengine console under IAM (Access Control) — the ark- API key above cannot call it.
+            </p>
+          </div>
+        )}
+
         <Input
           label="Priority"
           type="number"
@@ -393,7 +426,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
         </p>
 
         <div className="flex gap-2">
-          <Button onClick={handleSubmit} fullWidth disabled={saving || (!isOllamaLocal && (!formData.name || !formData.apiKey)) || (isCompatible && !formData.defaultModel.trim()) || (isAzure && (!azureData.azureEndpoint || !azureData.deployment || !azureData.organization)) || (isCloudflareAi && !cloudflareData.accountId)}>
+          <Button onClick={handleSubmit} fullWidth disabled={saving || (!isOllamaLocal && (!formData.name || !formData.apiKey)) || (isCompatible && !formData.defaultModel.trim()) || (isAzure && (!azureData.azureEndpoint || !azureData.deployment || !azureData.organization)) || (isCloudflareAi && !cloudflareData.accountId) || (isVolcengineAgent && (!volcengineData.accessKeyId.trim() || !volcengineData.secretAccessKey.trim()))}>
             {saving ? "Saving..." : "Save"}
           </Button>
           <Button onClick={onClose} variant="ghost" fullWidth>

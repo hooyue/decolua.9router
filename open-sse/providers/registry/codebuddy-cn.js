@@ -39,9 +39,11 @@ export default {
       scheme: "bearer",
     },
     // Quota endpoint differs from the chat gateway: POST returns nested Tencent
-    // billing payload (data.Response.Data.Accounts[]). See services/usage/codebuddy-cn.js.
+    // billing payload (data.Response.Data.Accounts[]). For enterprise accounts,
+    // usage is fetched from enterpriseUrl. See services/usage/codebuddy-cn.js.
     usage: {
       url: "https://copilot.tencent.com/v2/billing/meter/get-user-resource",
+      enterpriseUrl: "https://www.codebuddy.cn/billing/meter/get-enterprise-user-usage",
     },
   },
   models: [

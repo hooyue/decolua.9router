@@ -26,8 +26,16 @@ export const OPENCODE_REQUEST_RE = /^msg_[0-9a-f]{12}[0-9A-Za-z]{14}$/;
 const BASE62_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 function hasValidOpencodeVersion(ua) {
-  const m = String(ua || "").match(/opencode\/(\d+)\.(\d+)(?:\.(\d+))?/i);
-  if (!m) return false;
+  if (!ua || typeof ua !== "string") return false;
+  // v1 pattern: opencode/1.18.31
+  // v2 pattern: opencode/stable/2.1.2/cli or opencode/dev/2.0.0/desktop
+  const m = ua.match(/opencode\/(?:(?:stable|dev|beta|prod|local)\/)?(\d+)\.(\d+)(?:\.(\d+))?/i);
+  if (!m) {
+    if (/opencode\/(?:local|dev)\//i.test(ua)) return true;
+    const v2 = ua.match(/opencode\/(?:v)?(\d+)\.(\d+)/i);
+    if (!v2) return false;
+    return parseInt(v2[1], 10) >= 2;
+  }
   const major = parseInt(m[1], 10);
   const minor = parseInt(m[2], 10);
   return major > 1 || (major === 1 && minor >= 17);
@@ -102,10 +110,12 @@ function normalizeSession(value) {
   return normalized;
 }
 
+const NATIVE_SESSION_HEADERS = ["x-opencode-session", "x-session-affinity", "x-session-id"];
+
 function nativeSession(headers) {
   if (!headers || typeof headers !== "object") return null;
   for (const [key, value] of Object.entries(headers)) {
-    if (key.toLowerCase() === SESSION_HEADER) {
+    if (NATIVE_SESSION_HEADERS.includes(key.toLowerCase())) {
       const normalized = normalizeSession(value);
       if (normalized && OPENCODE_SESSION_RE.test(normalized)) return normalized;
     }
@@ -268,9 +278,9 @@ function resolveOpencodeSession(body, credentials, providerSessionId, clientTool
 
   let incoming = null;
   for (const [key, value] of Object.entries(headers)) {
-    if (key.toLowerCase() === SESSION_HEADER) {
+    if (NATIVE_SESSION_HEADERS.includes(key.toLowerCase())) {
       incoming = normalizeSession(value);
-      break;
+      if (incoming) break;
     }
   }
 
@@ -475,12 +485,17 @@ export class OpenCodeExecutor extends BaseExecutor {
       "Content-Type": "application/json",
       "Authorization": "Bearer public",
       "User-Agent": isOpencodeDownstream ? downstreamUa : OPENCODE_UA,
-      "x-opencode-client": lower["x-opencode-client"] || "desktop",
+      "x-opencode-client": lower["x-opencode-client"] || "cli",
       "x-opencode-session": session,
       "x-opencode-request": requestId,
       "x-opencode-project": lower["x-opencode-project"] || "global",
+      "x-session-affinity": lower["x-session-affinity"] || session,
+      "X-Session-Id": lower["x-session-id"] || session,
       "Accept": stream ? "text/event-stream" : "*/*",
     };
+    if (lower["x-parent-session-id"]) {
+      headers["x-parent-session-id"] = lower["x-parent-session-id"];
+    }
     if (url.endsWith("/messages")) headers["anthropic-version"] = ANTHROPIC_API_VERSION;
     return headers;
   }
