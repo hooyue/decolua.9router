@@ -95,10 +95,12 @@ function normalizeSession(value) {
   return normalized;
 }
 
+const NATIVE_SESSION_HEADERS = ["x-opencode-session", "x-session-affinity", "x-session-id"];
+
 function nativeSession(headers) {
   if (!headers || typeof headers !== "object") return null;
   for (const [key, value] of Object.entries(headers)) {
-    if (key.toLowerCase() === SESSION_HEADER) {
+    if (NATIVE_SESSION_HEADERS.includes(key.toLowerCase())) {
       const normalized = normalizeSession(value);
       if (normalized && OPENCODE_SESSION_RE.test(normalized)) return normalized;
     }
@@ -206,9 +208,9 @@ function resolveOpencodeSession(body, credentials, providerSessionId, clientTool
 
   let incoming = null;
   for (const [key, value] of Object.entries(headers)) {
-    if (key.toLowerCase() === SESSION_HEADER) {
+    if (NATIVE_SESSION_HEADERS.includes(key.toLowerCase())) {
       incoming = normalizeSession(value);
-      break;
+      if (incoming) break;
     }
   }
 
@@ -410,6 +412,9 @@ export class OpenCodeExecutor extends BaseExecutor {
       "x-opencode-project": lower["x-opencode-project"] || "global",
       "Accept": stream ? "text/event-stream" : "*/*",
     };
+    if (lower["x-parent-session-id"]) {
+      headers["x-parent-session-id"] = lower["x-parent-session-id"];
+    }
     if (url.endsWith("/messages")) headers["anthropic-version"] = ANTHROPIC_API_VERSION;
     return headers;
   }

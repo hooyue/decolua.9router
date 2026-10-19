@@ -215,6 +215,38 @@ describe("OpenCode Free User-Agent Validation", () => {
     expect(headers["x-opencode-client"]).toBe("cli");
     expect("x-opencode-request" in headers).toBe(false);
   });
+
+  it("forwards downstream x-parent-session-id for session affinity", () => {
+    const executor = getExecutor("opencode");
+    const valid = "ses_f534dfae8ffeCy4Ee4tLWNygDc";
+    const headers = executor.buildHeaders({
+      rawHeaders: {
+        "x-opencode-session": valid,
+        "x-parent-session-id": "ses_parent1234567890abcdef",
+        "x-opencode-client": "cli",
+      },
+    });
+
+    expect(headers["x-opencode-session"]).toBe(valid);
+    expect(headers["x-session-affinity"]).toBe(valid);
+    expect(headers["x-session-id"]).toBe(valid);
+    expect(headers["x-parent-session-id"]).toBe("ses_parent1234567890abcdef");
+    expect(headers["x-opencode-client"]).toBe("cli");
+  });
+
+  it("extracts the native session from x-session-affinity or x-session-id", () => {
+    const executor = getExecutor("opencode");
+    const valid = "ses_f534dfae8ffeCy4Ee4tLWNygDc";
+    const { prepared: prepAffinity } = prepare(executor, {
+      credentials: makeCredentials({ rawHeaders: { "x-session-affinity": valid } }),
+    });
+    expect(prepAffinity._opencodeSession).toBe(valid);
+
+    const { prepared: prepSessionId } = prepare(executor, {
+      credentials: makeCredentials({ rawHeaders: { "X-Session-Id": valid } }),
+    });
+    expect(prepSessionId._opencodeSession).toBe(valid);
+  });
 });
 
 describe("OpenCode Stable Session Reuse (429 follow-up)", () => {
@@ -319,6 +351,16 @@ describe("OpenCode Stable Session Reuse (429 follow-up)", () => {
     expect(transformed.reasoning?.effort).toBe("xhigh");
     expect(transformed.tools.map((tool) => tool.name)).toEqual(["zcode_search", "read", "shell"]);
     expect(transformed.instructions).toMatch(/Do not call the `read` or `shell` tools/);
+  });
+
+  it("detects the opencode client tool via clientDetector", async () => {
+    const { detectClientTool, isNativePassthrough } = await import("../../open-sse/utils/clientDetector.js");
+    expect(detectClientTool({ "user-agent": "opencode/stable/2.1.2/cli" })).toBe("opencode");
+    expect(detectClientTool({ "x-opencode-session": "ses_123" })).toBe("opencode");
+    expect(detectClientTool({ "x-opencode-client": "desktop" })).toBe("opencode");
+    expect(detectClientTool({ "x-opencode-project": "global" })).toBe("opencode");
+    expect(isNativePassthrough("opencode", "opencode")).toBe(true);
+    expect(isNativePassthrough("opencode", "opencode-go")).toBe(true);
   });
 
   it("declares forceStream on the opencode transport so chatCore serves SSE upstream", async () => {
