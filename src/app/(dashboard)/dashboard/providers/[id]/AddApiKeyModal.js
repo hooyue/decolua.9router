@@ -20,6 +20,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
 
   const isAzure = provider === "azure";
   const isCloudflareAi = provider === "cloudflare-ai";
+  const isVolcengineAgent = provider === "volcengine-agent";
   // Capability, not identity: gating this on `provider === "bedrock"` left bedrock-xai with no
   // way to enter a profile at all, which is the same mistake as hardcoding the API-key exemption.
   const usesAwsCredentialForm =
@@ -45,6 +46,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
     organization: "",
   });
   const [cloudflareData, setCloudflareData] = useState({ accountId: "" });
+  const [volcengineData, setVolcengineData] = useState({ accessKeyId: "", secretAccessKey: "" });
   const [bedrockData, setBedrockData] = useState({
     profile: "",
     region: "",
@@ -80,6 +82,12 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
     if (isCloudflareAi) {
       return { accountId: cloudflareData.accountId };
     }
+    if (isVolcengineAgent) {
+      return {
+        accessKeyId: volcengineData.accessKeyId.trim(),
+        secretAccessKey: volcengineData.secretAccessKey.trim(),
+      };
+    }
     if (usesAwsCredentialForm) {
       // Only send what the user filled in: an empty `profile` would otherwise select profile
       // mode and shadow static keys, since detectCredentialMode prefers a profile.
@@ -104,6 +112,7 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
     if (apiKeyOptionalWith && psd?.[apiKeyOptionalWith]) return true;
     // AWS static keys are a pair: a secret alone saves a connection that can never sign.
     if (usesAwsCredentialForm) return !!formData.apiKey && !!psd?.accessKeyId;
+    if (isVolcengineAgent) return !!psd?.accessKeyId && !!psd?.secretAccessKey && !!formData.apiKey;
     return !!formData.apiKey;
   };
 
@@ -366,6 +375,30 @@ export default function AddApiKeyModal({ isOpen, provider, providerName, isCompa
             />
             <p className="text-xs text-text-muted mt-2">
               Find your Account ID in the right sidebar of <a href="https://dash.cloudflare.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">dash.cloudflare.com</a>
+            </p>
+          </div>
+        )}
+        {isVolcengineAgent && (
+          <div className="bg-sidebar/50 p-4 rounded-lg border border-accent/20">
+            <h3 className="font-semibold mb-3 text-sm">Volcengine IAM Credentials (Quota Tracker)</h3>
+            <div className="flex flex-col gap-3">
+              <Input
+                label="AccessKeyId"
+                value={volcengineData.accessKeyId}
+                onChange={(e) => setVolcengineData({ ...volcengineData, accessKeyId: e.target.value })}
+                placeholder="AKLT..."
+              />
+              <Input
+                label="SecretAccessKey"
+                type="password"
+                value={volcengineData.secretAccessKey}
+                onChange={(e) => setVolcengineData({ ...volcengineData, secretAccessKey: e.target.value })}
+                placeholder=""
+              />
+            </div>
+            <p className="text-xs text-text-muted mt-2">
+              Used only to query Agent Plan (AFP) quota in the Quota Tracker. Create the key pair in the
+              Volcengine console under IAM (Access Control) — the ark- API key above cannot call it.
             </p>
           </div>
         )}

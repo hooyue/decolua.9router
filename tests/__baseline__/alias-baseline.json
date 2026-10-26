@@ -267,6 +267,7 @@
     "vercel-ai-gateway": "vercel-ai-gateway",
     "vertex": "vertex",
     "vertex-partner": "vertex-partner",
+    "volcengine-agent": "aap",
     "volcengine-ark": "volcengine-ark",
     "voyage-ai": "voyage-ai",
     "xai": "xai",
@@ -277,6 +278,7 @@
     "zed": "zd"
   },
   "modelKeys": [
+    "aap",
     "af",
     "ag",
     "agnes",
@@ -356,6 +358,7 @@
     "oc",
     "ocz",
     "ollama",
+    "ollama-local",
     "openai",
     "openai-tts-models",
     "openai-tts-voices",

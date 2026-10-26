@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { formatResetTime, getRemainingPercentage } from "./utils";
+import { formatResetTime, getRemainingPercentage, sortQuotas } from "./utils";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 4;
 
 /**
  * Format reset time display (Today, 12:00 PM)
@@ -67,18 +67,6 @@ function getColorClasses(remainingPercentage) {
     bgLight: "bg-red-500/10",
     emoji: "🔴",
   };
-}
-
-function sortQuotas(quotas, sortMode) {
-  if (sortMode === "remaining-asc") {
-    return [...quotas].sort((a, b) => a.remaining - b.remaining || a.name.localeCompare(b.name));
-  }
-
-  if (sortMode === "remaining-desc") {
-    return [...quotas].sort((a, b) => b.remaining - a.remaining || a.name.localeCompare(b.name));
-  }
-
-  return quotas;
 }
 
 /**
