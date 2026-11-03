@@ -1,4 +1,5 @@
 import { CODEBUDDY_CONFIG } from "../constants/oauth.js";
+import { extractEnterpriseIdFromToken } from "open-sse/utils/enterpriseId.js";
 
 // CodeBuddy (Tencent) - Browser OAuth Polling Flow
 // 1. POST stateUrl → get { state, authUrl }
@@ -69,12 +70,17 @@ const codebuddyCn = {
     if (data.code === 11217) return { ok: true, data: { error: "authorization_pending" } };
     return { ok: false, data: { error: data.msg || "unknown_error" } };
   },
-  mapTokens: (tokens) => ({
-    accessToken: tokens.access_token,
-    refreshToken: tokens.refresh_token,
-    expiresIn: tokens.expires_in || 86400,
-    providerSpecificData: {},
-  }),
+  mapTokens: (tokens) => {
+    // Enterprise (WorkBuddy) tokens carry ent-member:<id> realm roles — persist
+    // the id so chat/usage requests can send X-Enterprise-Id.
+    const enterpriseId = extractEnterpriseIdFromToken(tokens.access_token);
+    return {
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+      expiresIn: tokens.expires_in || 86400,
+      providerSpecificData: enterpriseId ? { enterpriseId } : {},
+    };
+  },
 };
 
 export default codebuddyCn;
